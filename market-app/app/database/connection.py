@@ -1,28 +1,31 @@
 import duckdb
-from contextlib import contextmanager
-from app.core.config import settings
 import os
+import logging
 
-# Ensure data directory exists locally
-os.makedirs(os.path.dirname(settings.DATABASE_PATH), exist_ok=True)
+# Configure logging to match Uvicorn's stream
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-@contextmanager
+DB_PATH = "/app/data/platform.db"
+SCHEMA_PATH = "/app/app/database/schema.sql"
+
 def get_db_connection():
-    """
-    Context manager to safely open and close a DuckDB connection.
-    DuckDB allows multiple readers but only one writer at a time.
-    """
-    conn = duckdb.connect(database=settings.DATABASE_PATH, read_only=False)
-    try:
-        yield conn
-    finally:
-        conn.close()
+    """Returns a connection to the local DuckDB instance."""
+    return duckdb.connect(database=DB_PATH, read_only=False)
 
 def init_db():
-    """
-    Initializes basic health check or verification structures if needed.
-    Future migrations/schema creation can be invoked here.
-    """
-    with get_db_connection() as conn:
-        # Simple verification query
-        conn.execute("SELECT 1;")
+    """Reads and executes the schema.sql file to initialize tables."""
+    logger.info("Starting database initialization...")
+    
+    if os.path.exists(SCHEMA_PATH):
+        try:
+            with open(SCHEMA_PATH, 'r') as f:
+                schema_sql = f.read()
+            
+            with get_db_connection() as conn:
+                conn.execute(schema_sql)
+                logger.info("Database initialized and seed data ingested successfully.")
+        except Exception as e:
+            logger.error(f"CRITICAL ERROR during DuckDB execution: {e}")
+    else:
+        logger.warning(f"Schema file not found at {SCHEMA_PATH}")
