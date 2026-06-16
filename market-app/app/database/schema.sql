@@ -10,11 +10,11 @@ CREATE TABLE IF NOT EXISTS ohlcv_weekly (
     PRIMARY KEY (ticker, date)
 );
 
--- 2. Create the Universe Mapping Table natively from the static CSV
--- Note: '/app/data/...' is the path inside the Docker container
-CREATE TABLE IF NOT EXISTS universe_mapping AS 
+-- 2. Create the Universe Mapping Table from the seed CSV
+-- Seed file lives at repo-root data/seed/ (mounted to /app/data in Docker)
+CREATE OR REPLACE TABLE universe_mapping AS 
 SELECT 
     UPPER(TRIM(Ticker)) AS ticker,
     UPPER(TRIM(Universe)) AS universe_name,
     CURRENT_DATE AS added_at
-FROM read_csv_auto('/app/data/seed/universes.csv');
+FROM read_csv_auto('/app/data/seed/universes.csv', header=true);
